@@ -31,16 +31,27 @@ jobs:
             exit 1
           fi
 
+          # Sanitize URL and Secret using bash parameter expansion (no echo of secret)
+          CLEAN_URL="${GENERATE_URL//[\"\'\r\n ]/}"
+          CLEAN_SECRET="${GENERATE_SECRET//[\"\'\r\n ]/}"
+
+          # Auto-append /api/generate if only the base URL domain was provided
+          if [[ "${CLEAN_URL}" != *"/api/generate"* ]]; then
+            CLEAN_URL="${CLEAN_URL%/}/api/generate"
+          fi
+
+          echo "Connecting to production endpoint..."
+
           # Call the endpoint without printing secrets. Save response body to /tmp/generate-response.json.
           status_code="$(curl --silent --show-error \
             --output /tmp/generate-response.json \
             --write-out "%{http_code}" \
             --max-time 240 \
             --request POST \
-            --header "Authorization: Bearer ${GENERATE_SECRET}" \
+            --header "Authorization: Bearer ${CLEAN_SECRET}" \
             --header "Content-Type: application/json" \
             --data '{"trigger":"scheduled","timezone":"Asia/Kolkata"}' \
-            "${GENERATE_URL}")"
+            "${CLEAN_URL}")"
 
           if [ "${status_code}" -lt 200 ] || [ "${status_code}" -ge 300 ]; then
             echo "::error::Generation endpoint failed with HTTP ${status_code}."
@@ -93,9 +104,10 @@ jobs:
           from email.message import EmailMessage
           from urllib.parse import urlparse
 
-          gmail = os.environ.get("GMAIL_ADDRESS", "").strip()
-          app_password = os.environ.get("GMAIL_APP_PASSWORD", "").replace(" ", "").strip()
+          gmail = os.environ.get("GMAIL_ADDRESS", "").strip().strip('"').strip("'")
+          app_password = os.environ.get("GMAIL_APP_PASSWORD", "").replace(" ", "").strip().strip('"').strip("'")
           recipient = os.environ.get("RECIPIENT_EMAIL", "").strip() or gmail
+          recipient = recipient.strip().strip('"').strip("'")
 
           if not gmail or not app_password:
               sys.exit("::error::Missing Gmail Actions secrets. Configure NEWSPAPER_GMAIL_ADDRESS and NEWSPAPER_GMAIL_APP_PASSWORD; NEWSPAPER_RECIPIENT_EMAIL is optional.")
