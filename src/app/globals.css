@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-muted: #F5F5F5;
+  --text-primary: #111111;
+  --text-secondary: #404040;
+  --text-muted: #666666;
+  --border: #D2D2D2;
+  --border-strong: #111111;
+  --brand: #111111;
+  --accent: #333333;
+  --success: #333333;
+  --warning: #555555;
+  --danger: #111111;
+  --info: #444444;
+}
+
+.dark {
+  --background: #111111;
+  --surface: #1A1A1A;
+  --surface-muted: #242424;
+  --text-primary: #F7F7F7;
+  --text-secondary: #D5D5D5;
+  --text-muted: #A8A8A8;
+  --border: #444444;
+  --border-strong: #F7F7F7;
+  --brand: #FFFFFF;
+  --accent: #DADADA;
+  --success: #D5D5D5;
+  --warning: #D5D5D5;
+  --danger: #FFFFFF;
+  --info: #D5D5D5;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-sans), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Classic Newspaper Rules */
+.rule-thin {
+  border-top: 1px solid var(--border);
+}
+
+.rule-strong {
+  border-top: 2px solid var(--border-strong);
+}
+
+.rule-double {
+  border-top: 3px double var(--border-strong);
+}
