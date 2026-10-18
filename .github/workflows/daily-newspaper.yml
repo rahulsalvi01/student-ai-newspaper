@@ -31,16 +31,11 @@ jobs:
             exit 1
           fi
 
-          # Sanitize URL and Secret using bash parameter expansion (no echo of secret)
-          CLEAN_URL="${GENERATE_URL//[\"\'\r\n ]/}"
-          CLEAN_SECRET="${GENERATE_SECRET//[\"\'\r\n ]/}"
+          # Sanitize URL and Secret cleanly via python3
+          CLEAN_URL="$(python3 -c "import os; u = os.environ.get('GENERATE_URL', '').strip().strip('\"\''); print(u if u.endswith('/api/generate') else u.rstrip('/') + '/api/generate')")"
+          CLEAN_SECRET="$(python3 -c "import os; print(os.environ.get('GENERATE_SECRET', '').strip().strip('\"\''))")"
 
-          # Auto-append /api/generate if only the base URL domain was provided
-          if [[ "${CLEAN_URL}" != *"/api/generate"* ]]; then
-            CLEAN_URL="${CLEAN_URL%/}/api/generate"
-          fi
-
-          echo "Connecting to production endpoint..."
+          echo "Connecting to production generation endpoint..."
 
           # Call the endpoint without printing secrets. Save response body to /tmp/generate-response.json.
           status_code="$(curl --silent --show-error \
