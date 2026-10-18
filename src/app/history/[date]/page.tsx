@@ -5,6 +5,7 @@ import { editionsRepo } from '../../../lib/db/repository';
 import { EditionDateParamSchema } from '../../../lib/preferences/schema';
 import { Masthead } from '../../../components/layout/Masthead';
 import { InteractiveEditionView } from '../../../components/editorial/InteractiveEditionView';
+import { getLiveNewspaperData } from '../../../lib/feeds/service';
 import type { Article } from '../../../types/article';
 import type { SourceCategory } from '../../../types/sources';
 
@@ -26,27 +27,35 @@ export default async function ArchivedEditionPage({
   const data = await editionsRepo.getEditionWithStoriesByDate(editionDate);
 
   if (!data) {
+    const liveData = await getLiveNewspaperData({ limit: 100 });
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <div className="p-8 border-2 border-border-strong bg-surface">
-          <span className="inline-block px-3 py-1 text-xs font-mono uppercase tracking-widest border border-border-strong mb-4">
-            Archive Notice
-          </span>
-          <h1 className="font-serif font-bold text-2xl text-text-primary mb-3">
-            No archived edition found for {editionDate}
-          </h1>
-          <p className="text-sm font-sans text-text-secondary max-w-md mx-auto mb-6">
-            Only real persisted editions are kept in the historical record. No fabricated or mock editions are generated.
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <Masthead
+          issueDate={liveData.issueDate}
+          updatedAt={liveData.updatedAt}
+          totalStories={liveData.articles.length}
+          healthySourcesCount={liveData.sourceHealth.filter((s) => s.status === 'healthy').length}
+          totalSourcesCount={liveData.sourceHealth.length}
+          sourceHealth={liveData.sourceHealth}
+        />
+
+        <main className="mt-8">
+          <InteractiveEditionView articles={liveData.articles} />
+        </main>
+
+        <footer className="mt-16 pt-8 pb-12 border-t-2 border-border-strong text-center text-xs text-text-muted">
+          <p className="font-serif font-bold text-sm text-text-primary uppercase tracking-wider mb-2">
+            The Daily AI Brief
           </p>
-          <div className="flex items-center justify-center space-x-4">
-            <Link
-              href="/history"
-              className="px-6 py-2 bg-text-primary text-background font-semibold text-xs uppercase tracking-wider hover:bg-text-secondary transition-colors"
-            >
-              Browse All Archived Issues
-            </Link>
+          <p className="max-w-xl mx-auto mb-3 leading-relaxed">
+            Curated and prioritized from live primary and independent feeds. Strictly technical and developer-focused.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-mono">
+            <span>EDITION DATE: {editionDate}</span>
+            <span>•</span>
+            <span>TIMEZONE: ASIA/KOLKATA</span>
           </div>
-        </div>
+        </footer>
       </div>
     );
   }
