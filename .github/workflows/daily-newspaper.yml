@@ -1,0 +1,99 @@
+name: Daily newspaper generation
+
+on:
+  schedule:
+    # 08:00 Asia/Kolkata = 02:30 UTC. GitHub scheduled runs are best-effort.
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-newspaper-generation
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger protected generation endpoint
+        env:
+          GENERATE_URL: ${{ secrets.NEWSPAPER_GENERATE_URL }}
+          GENERATE_SECRET: ${{ secrets.NEWSPAPER_GENERATE_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GENERATE_URL}" ] || [ -z "${GENERATE_SECRET}" ]; then
+            echo "Required repository secrets are missing."
+            exit 1
+          fi
+
+          # Do not echo secrets. Response body is intentionally not printed.
+          status_code="$(curl --silent --show-error \
+            --output /tmp/generate-response.json \
+            --write-out "%{http_code}" \
+            --max-time 240 \
+            --request POST \
+            --header "Authorization: Bearer ${GENERATE_SECRET}" \
+            --header "Content-Type: application/json" \
+            --data '{"trigger":"scheduled","timezone":"Asia/Kolkata"}' \
+            "${GENERATE_URL}")"
+
+          if [ "${status_code}" -lt 200 ] || [ "${status_code}" -ge 300 ]; then
+            echo "Generation endpoint returned HTTP ${status_code}."
+            # Avoid printing potentially sensitive server response.
+            exit 1
+          fi
+          echo "Generation endpoint completed successfully."
+
+      - name: Email the ready edition link to Gmail
+        env:
+          GMAIL_ADDRESS: ${{ secrets.NEWSPAPER_GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.NEWSPAPER_GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.NEWSPAPER_RECIPIENT_EMAIL }}
+        run: |
+          set -euo pipefail
+          python - <<'PYCODE'
+          import json
+          import os
+          import smtplib
+          import ssl
+          import sys
+          from email.message import EmailMessage
+          from urllib.parse import urlparse
+
+          gmail = os.environ.get("GMAIL_ADDRESS", "").strip()
+          app_password = os.environ.get("GMAIL_APP_PASSWORD", "").replace(" ", "").strip()
+          recipient = os.environ.get("RECIPIENT_EMAIL", "").strip() or gmail
+          if not gmail or not app_password or not recipient:
+              sys.exit("Missing Gmail Actions secrets. Configure NEWSPAPER_GMAIL_ADDRESS and NEWSPAPER_GMAIL_APP_PASSWORD; recipient is optional.")
+
+          with open("/tmp/generate-response.json", "r", encoding="utf-8") as f:
+              result = json.load(f)
+          edition_url = result.get("editionUrl")
+          issue_date = result.get("issueDate", "Today's edition")
+          article_count = result.get("articleCount")
+          parsed_url = urlparse(edition_url) if isinstance(edition_url, str) else None
+          if not parsed_url or parsed_url.scheme != "https" or not parsed_url.netloc:
+              sys.exit("Generation response must include a valid HTTPS editionUrl. No email sent.")
+
+          msg = EmailMessage()
+          msg["Subject"] = f"Your AI & Tech Newspaper is ready — {issue_date}"
+          msg["From"] = gmail
+          msg["To"] = recipient
+          count_line = f"Stories in this edition: {article_count}\n\n" if isinstance(article_count, int) else ""
+          msg.set_content(
+              "Your daily AI & technology newspaper is ready.\n\n"
+              + count_line
+              + "Open today's edition here:\n"
+              + edition_url
+              + "\n\nThis email contains a link to your newspaper, not copied publisher articles.\n"
+          )
+
+          context = ssl.create_default_context()
+          with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context, timeout=30) as server:
+              server.login(gmail, app_password)
+              server.send_message(msg)
+          print("Edition link emailed successfully.")
+          PYCODE

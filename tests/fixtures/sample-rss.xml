@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Test AI Engineering Feed</title>
+    <link>https://example.com</link>
+    <description>Unit test fixture feed for RSS parser</description>
+    <language>en</language>
+    <item>
+      <title><![CDATA[New Open Weights Model Released v2.0]]></title>
+      <link>https://example.com/posts/model-v2-release</link>
+      <guid isPermaLink="true">https://example.com/posts/model-v2-release</guid>
+      <pubDate>Sun, 18 Oct 2026 04:30:00 GMT</pubDate>
+      <dc:creator>AI Engineering Team</dc:creator>
+      <category>Open Source</category>
+      <category>Models</category>
+      <description><![CDATA[<p>A new 14B parameter open-weight model with Apache 2.0 license has been announced.</p>]]></description>
+      <content:encoded><![CDATA[<p>Full details about benchmark scores and evaluation datasets.</p>]]></content:encoded>
+    </item>
+    <item>
+      <title>Developer Assistant CLI Tool Updated</title>
+      <link>https://example.com/posts/cli-tool-update</link>
+      <guid>cli-tool-12345</guid>
+      <pubDate>Sat, 17 Oct 2026 12:00:00 GMT</pubDate>
+      <dc:creator>Dev Tools Org</dc:creator>
+      <description>The command line agent can now generate test suites deterministically.</description>
+    </item>
+  </channel>
+</rss>
