@@ -102,7 +102,8 @@ jobs:
           gmail = os.environ.get("GMAIL_ADDRESS", "").strip().strip('"').strip("'")
           app_password = os.environ.get("GMAIL_APP_PASSWORD", "").replace(" ", "").strip().strip('"').strip("'")
           recipient = os.environ.get("RECIPIENT_EMAIL", "").strip() or gmail
-          recipient = recipient.strip().strip('"').strip("'")
+          recipient = recipient.strip('"').strip("'")
+          recipients = [r.strip().strip('"').strip("'") for r in recipient.split(",") if r.strip()]
 
           if not gmail or not app_password:
               sys.exit("::error::Missing Gmail Actions secrets. Configure NEWSPAPER_GMAIL_ADDRESS and NEWSPAPER_GMAIL_APP_PASSWORD; NEWSPAPER_RECIPIENT_EMAIL is optional.")
@@ -121,7 +122,7 @@ jobs:
           msg = EmailMessage()
           msg["Subject"] = f"Your AI & Tech Newspaper is ready — {issue_date}"
           msg["From"] = gmail
-          msg["To"] = recipient
+          msg["To"] = ", ".join(recipients)
 
           count_line = f"Stories in this edition: {article_count}\n\n" if isinstance(article_count, int) else ""
           msg.set_content(
@@ -136,13 +137,9 @@ jobs:
               context = ssl.create_default_context()
               with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context, timeout=30) as server:
                   server.login(gmail, app_password)
-                  server.send_message(msg)
+                  server.send_message(msg, from_addr=gmail, to_addrs=recipients)
               
-              masked_recipient = recipient
-              if "@" in recipient:
-                  local, domain = recipient.split("@", 1)
-                  masked_recipient = f"{local[:2]}***@{domain}"
-              print(f"Edition link emailed successfully to {masked_recipient}.")
+              print(f"Edition link emailed successfully to {len(recipients)} recipient(s): {', '.join(recipients)}.")
           except Exception as exc:
               # Explicit failure reporting without printing passwords
               sys.exit(f"::error::Failed to send email via Gmail SMTP: {type(exc).__name__}: {exc}")
