@@ -1,51 +1,52 @@
 import React from 'react';
 import { getLiveNewspaperData } from '../lib/feeds/service';
 import { Masthead } from '../components/layout/Masthead';
-import { SectionGrid } from '../components/editorial/SectionGrid';
+import { InteractiveEditionView } from '../components/editorial/InteractiveEditionView';
 import { EmptyState } from '../components/editorial/EmptyState';
-import { SourceHealthPanel } from '../components/editorial/SourceHealthPanel';
 
 // Ensure this page runs dynamically server-side
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const data = await getLiveNewspaperData();
+  // Fetch and prioritize top 100 quality articles from real sources / persisted edition
+  const data = await getLiveNewspaperData({ limit: 100 });
   const healthyCount = data.sourceHealth.filter((s) => s.status === 'healthy').length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-      {/* Partial failure notice if applicable */}
-      {data.partialFailureNotice && (
+      {/* All-Source Failure or Fallback Warning Notice */}
+      {data.warningNotice && (
         <aside
-          aria-label="Source Availability Notice"
-          className="mb-4 p-2.5 bg-surface-muted border-l-4 border-border-strong text-xs font-sans text-text-secondary flex items-center justify-between"
+          role="alert"
+          aria-label="Editorial Warning Notice"
+          className="mb-4 p-3 bg-surface border-2 border-border-strong text-xs font-mono text-text-primary flex items-center justify-between"
         >
-          <span>{data.partialFailureNotice}</span>
-          <a
-            href="#source-health"
-            className="font-semibold text-text-primary underline ml-2 whitespace-nowrap"
-          >
-            View details
-          </a>
+          <div className="flex items-center space-x-2">
+            <span className="font-bold uppercase tracking-wider">[EDITORIAL NOTICE]</span>
+            <span>{data.warningNotice}</span>
+          </div>
         </aside>
       )}
 
-      {/* Editorial Masthead */}
+      {/* Editorial Masthead with Asia/Kolkata date, updated at, and compact source status */}
       <Masthead
         issueDate={data.issueDate}
+        updatedAt={data.updatedAt}
         totalStories={data.articles.length}
         healthySourcesCount={healthyCount}
         totalSourcesCount={data.sourceHealth.length}
+        sourceHealth={data.sourceHealth}
       />
 
+      {/* Main Content: Interactive search/filters connected to real persisted stories */}
       <main className="mt-8">
         {data.articles.length === 0 ? (
-          <EmptyState sourceHealth={data.sourceHealth} />
+          <EmptyState
+            sourceHealth={data.sourceHealth}
+            customMessage={data.warningNotice}
+          />
         ) : (
-          <>
-            <SectionGrid articles={data.articles} />
-            <SourceHealthPanel sources={data.sourceHealth} />
-          </>
+          <InteractiveEditionView articles={data.articles} />
         )}
       </main>
 
@@ -55,15 +56,15 @@ export default async function HomePage() {
           The Daily AI Brief
         </p>
         <p className="max-w-xl mx-auto mb-3 leading-relaxed">
-          Published exclusively from live primary and independent feeds. No fabricated stories, sample
-          cards, or synthetic headlines. Designed for IT students and developers.
+          Curated and prioritized from live primary and independent feeds. Strictly technical and developer-focused:
+          model releases, engineering tools, and evaluated research.
         </p>
-        <div className="flex items-center justify-center space-x-4 text-[11px] font-mono">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-mono">
           <span>TIMEZONE: ASIA/KOLKATA</span>
           <span>•</span>
-          <span>STRICT SEPARATION: SNIPPET VS AI</span>
+          <span>EDITION: TOP 100 PRIORITIZED</span>
           <span>•</span>
-          <span>EDITORIAL POLICY: VERIFIED</span>
+          <span>QUALITY FILTERING: ACTIVE</span>
         </div>
       </footer>
     </div>

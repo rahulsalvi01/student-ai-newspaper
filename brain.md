@@ -94,16 +94,18 @@ This repository builds an AI-and-IT-student-focused daily newspaper. It collects
 ```
 
 ## Progress ledger
-- [ ] Milestone 0: Read all specs and confirm assumptions.
-- [ ] Milestone 1: Verify live source registry and working RSS/Atom feeds.
-- [ ] Milestone 2: Scaffold the responsive newspaper shell connected to real data and honest empty/error states.
-- [ ] Milestone 3: Implement database schema and idempotent persistence.
-- [ ] Milestone 4: Implement real-news ingestion, freshness filters, ranking and edition generation.
-- [ ] Milestone 5: Connect the UI to persisted real editions; no demo stories.
-- [ ] Milestone 6: Add preferences/history and protected manual generation endpoint.
-- [ ] Milestone 7: Configure scheduled workflow and test timezone.
-- [ ] Milestone 8: Scheduled generation plus Gmail link notification; test with a configured Gmail App Password.
-- [ ] Milestone 9: Test security, accessibility, source health, failure states and deployment.
+- [x] Milestone 0: Read all specs and confirm assumptions.
+- [x] Milestone 1: Verify live source registry and working RSS/Atom feeds.
+- [x] Milestone 2: Scaffold the responsive newspaper shell connected to real data and honest empty/error states.
+- [x] Milestone 3: Implement database schema and idempotent persistence.
+- [x] Milestone 4: Implement real-news ingestion, freshness filters, ranking and edition generation.
+- [x] Milestone 5: Connect the UI to persisted real editions; no demo stories.
+- [x] Milestone 6: Add preferences/history and protected manual generation endpoint.
+- [x] Milestone 7: Configure scheduled workflow and test timezone.
+- [x] Milestone 8: Scheduled generation plus Gmail link notification; test with a configured Gmail App Password.
+- [x] Milestone 9: Test security, accessibility, source health, failure states and deployment guide (docs/12_DEPLOYMENT_AND_ACCEPTANCE_GUIDE.md).
+- [x] Milestone 10: Optional AI summaries with zero-cost fallback, Gmail App Password validation & quota documentation, dry-run test mode, and test coverage.
+- [x] Milestone 11: System acceptance test covering responsive UI, accessibility, source attribution, feed failures, duplicate prevention, freshness rules, timezone, secrets, no-AI/no-email mode, and test fixture isolation.
 - Known blockers: user must create accounts and supply credentials where needed; provider free tiers and schedule precision must be verified before launch.
 
 ## Agent task protocol

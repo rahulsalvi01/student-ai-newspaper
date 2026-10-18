@@ -11,9 +11,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify-feeds": "tsx scripts/verify-feeds.ts"
+    "verify-feeds": "tsx scripts/verify-feeds.ts",
+    "generate": "tsx scripts/trigger-generate.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "fast-xml-parser": "^5.11.2",
     "next": "^15.2.0",
     "react": "^19.0.0",

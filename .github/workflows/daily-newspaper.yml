@@ -2,7 +2,8 @@ name: Daily newspaper generation
 
 on:
   schedule:
-    # 08:00 Asia/Kolkata = 02:30 UTC. GitHub scheduled runs are best-effort.
+    # 08:00 Asia/Kolkata (IST) corresponds to 02:30 UTC.
+    # Note: GitHub Actions schedule triggers are best-effort and can be delayed during peak load.
     - cron: "30 2 * * *"
   workflow_dispatch:
 
@@ -24,12 +25,13 @@ jobs:
           GENERATE_SECRET: ${{ secrets.NEWSPAPER_GENERATE_SECRET }}
         run: |
           set -euo pipefail
-          if [ -z "${GENERATE_URL}" ] || [ -z "${GENERATE_SECRET}" ]; then
-            echo "Required repository secrets are missing."
+          if [ -z "${GENERATE_URL:-}" ] || [ -z "${GENERATE_SECRET:-}" ]; then
+            echo "::error::Required repository secrets NEWSPAPER_GENERATE_URL or NEWSPAPER_GENERATE_SECRET are missing."
+            echo "Please configure them in repository Settings -> Secrets and variables -> Actions."
             exit 1
           fi
 
-          # Do not echo secrets. Response body is intentionally not printed.
+          # Call the endpoint without printing secrets. Save response body to /tmp/generate-response.json.
           status_code="$(curl --silent --show-error \
             --output /tmp/generate-response.json \
             --write-out "%{http_code}" \
@@ -41,11 +43,39 @@ jobs:
             "${GENERATE_URL}")"
 
           if [ "${status_code}" -lt 200 ] || [ "${status_code}" -ge 300 ]; then
-            echo "Generation endpoint returned HTTP ${status_code}."
-            # Avoid printing potentially sensitive server response.
+            echo "::error::Generation endpoint failed with HTTP ${status_code}."
+            # Safely report error details without exposing credentials
+            python3 -c "
+          import json
+          try:
+              with open('/tmp/generate-response.json') as f:
+                  data = json.load(f)
+              err = data.get('error', 'UNKNOWN_ERROR')
+              msg = data.get('message', 'No details provided.')
+              print(f'Error code: {err}')
+              print(f'Message: {msg}')
+          except Exception:
+              print('Could not parse JSON response.')
+          "
             exit 1
           fi
-          echo "Generation endpoint completed successfully."
+
+          echo "Generation endpoint completed successfully with HTTP ${status_code}."
+          python3 -c "
+          import json
+          try:
+              with open('/tmp/generate-response.json') as f:
+                  data = json.load(f)
+              print(f'Issue Date:     {data.get(\"issueDate\")}')
+              print(f'Edition Status: {data.get(\"editionStatus\")}')
+              print(f'Article Count:  {data.get(\"articleCount\")}')
+              print(f'Edition URL:    {data.get(\"editionUrl\")}')
+              print(f'Sources Attempted: {data.get(\"sourcesFetched\")}')
+              print(f'Sources Succeeded: {data.get(\"sourcesAccepted\")}')
+              print(f'Sources Failed:    {data.get(\"sourcesFailed\")}')
+          except Exception:
+              pass
+          "
 
       - name: Email the ready edition link to Gmail
         env:
@@ -54,7 +84,7 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.NEWSPAPER_RECIPIENT_EMAIL }}
         run: |
           set -euo pipefail
-          python - <<'PYCODE'
+          python3 - <<'PYCODE'
           import json
           import os
           import smtplib
@@ -66,22 +96,26 @@ jobs:
           gmail = os.environ.get("GMAIL_ADDRESS", "").strip()
           app_password = os.environ.get("GMAIL_APP_PASSWORD", "").replace(" ", "").strip()
           recipient = os.environ.get("RECIPIENT_EMAIL", "").strip() or gmail
-          if not gmail or not app_password or not recipient:
-              sys.exit("Missing Gmail Actions secrets. Configure NEWSPAPER_GMAIL_ADDRESS and NEWSPAPER_GMAIL_APP_PASSWORD; recipient is optional.")
+
+          if not gmail or not app_password:
+              sys.exit("::error::Missing Gmail Actions secrets. Configure NEWSPAPER_GMAIL_ADDRESS and NEWSPAPER_GMAIL_APP_PASSWORD; NEWSPAPER_RECIPIENT_EMAIL is optional.")
 
           with open("/tmp/generate-response.json", "r", encoding="utf-8") as f:
               result = json.load(f)
+
           edition_url = result.get("editionUrl")
           issue_date = result.get("issueDate", "Today's edition")
           article_count = result.get("articleCount")
+
           parsed_url = urlparse(edition_url) if isinstance(edition_url, str) else None
           if not parsed_url or parsed_url.scheme != "https" or not parsed_url.netloc:
-              sys.exit("Generation response must include a valid HTTPS editionUrl. No email sent.")
+              sys.exit("::error::Generation response must include a valid HTTPS editionUrl. No email sent.")
 
           msg = EmailMessage()
           msg["Subject"] = f"Your AI & Tech Newspaper is ready — {issue_date}"
           msg["From"] = gmail
           msg["To"] = recipient
+
           count_line = f"Stories in this edition: {article_count}\n\n" if isinstance(article_count, int) else ""
           msg.set_content(
               "Your daily AI & technology newspaper is ready.\n\n"
@@ -91,9 +125,18 @@ jobs:
               + "\n\nThis email contains a link to your newspaper, not copied publisher articles.\n"
           )
 
-          context = ssl.create_default_context()
-          with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context, timeout=30) as server:
-              server.login(gmail, app_password)
-              server.send_message(msg)
-          print("Edition link emailed successfully.")
+          try:
+              context = ssl.create_default_context()
+              with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context, timeout=30) as server:
+                  server.login(gmail, app_password)
+                  server.send_message(msg)
+              
+              masked_recipient = recipient
+              if "@" in recipient:
+                  local, domain = recipient.split("@", 1)
+                  masked_recipient = f"{local[:2]}***@{domain}"
+              print(f"Edition link emailed successfully to {masked_recipient}.")
+          except Exception as exc:
+              # Explicit failure reporting without printing passwords
+              sys.exit(f"::error::Failed to send email via Gmail SMTP: {type(exc).__name__}: {exc}")
           PYCODE

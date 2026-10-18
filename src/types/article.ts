@@ -16,6 +16,8 @@ export interface Article {
   summaryKind: 'source_snippet' | 'ai_generated';
   provenanceLabel: 'Primary source' | 'Independent reporting' | 'Preprint' | 'Official release';
   categories: string[];
+  priorityScore?: number;
+  priorityReasons?: string[];
 }
 
 export interface SourceHealthSummary {
@@ -41,4 +43,7 @@ export interface NewspaperPageData {
   articles: Article[];
   sourceHealth: SourceHealthSummary[];
   partialFailureNotice?: string;
+  warningNotice?: string;
+  editionStatus?: 'building' | 'ready' | 'partial' | 'failed';
+  isPreservedPreviousEdition?: boolean;
 }

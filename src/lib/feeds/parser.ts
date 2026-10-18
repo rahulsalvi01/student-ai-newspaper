@@ -278,6 +278,7 @@ export async function fetchFeedXml(
       },
       signal: controller.signal,
       redirect: 'follow',
+      cache: 'no-store',
     });
 
     const responseTimeMs = Date.now() - startTime;
