@@ -1,10 +1,9 @@
 name: Daily newspaper generation
 
 on:
-  schedule:
-    # 08:00 Asia/Kolkata (IST) corresponds to 02:30 UTC.
-    # Note: GitHub Actions schedule triggers are best-effort and can be delayed during peak load.
-    - cron: "30 2 * * *"
+  # Internal GitHub schedule is replaced by cron-job.org for precise 08:00 IST triggering.
+  # schedule:
+  #   - cron: "30 2 * * *"
   workflow_dispatch:
 
 permissions:
