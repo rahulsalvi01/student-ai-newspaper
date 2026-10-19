@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import type { SourceHealthSummary } from '../../types/article';
+import { HeaderSubscribeButton } from '../subscription/CornerSubscribeButton';
 
 interface MastheadProps {
   issueDate: string;
@@ -77,6 +78,8 @@ export function Masthead({
           <Link href="/settings" className="hover:text-text-primary hover:underline">
             PREFERENCES
           </Link>
+          <span>•</span>
+          <HeaderSubscribeButton />
           <span>•</span>
           <span className="font-semibold text-text-primary">
             {totalStories} TOP PRIORITIZED {totalStories === 1 ? 'STORY' : 'STORIES'}
@@ -171,6 +174,11 @@ export function Masthead({
           <li>
             <a href="#infrastructure" className="hover:text-text-primary hover:underline">
               Infrastructure
+            </a>
+          </li>
+          <li>
+            <a href="#subscribe" className="text-red-600 hover:text-red-700 font-bold hover:underline">
+              ✉ Subscribe
             </a>
           </li>
         </ul>

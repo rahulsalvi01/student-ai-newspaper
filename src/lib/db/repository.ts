@@ -16,6 +16,8 @@ import type {
   SummaryKind,
   GenerationTrigger,
   GenerationStatus,
+  SubscriberRow,
+  SubscriberInsert,
 } from '../../types/database';
 
 /**
@@ -462,5 +464,106 @@ export const generationRunsRepo = {
     if (error) {
       console.error(`Failed to finish generation run ${id}:`, error.message);
     }
+  },
+};
+
+/**
+ * In-memory fallback storage for subscribers when database is not yet configured.
+ * Preserves local development resilience.
+ */
+const inMemorySubscribers = new Map<string, SubscriberRow>();
+
+/**
+ * Subscribers Repository
+ */
+export const subscribersRepo = {
+  /**
+   * Adds or activates a subscriber.
+   * Handles duplicate emails idempotently and normalizes whitespace/casing.
+   */
+  async addSubscriber(
+    rawEmail: string,
+    source = 'website',
+    client: SupabaseClient<Database> | null = getSupabaseAdminClient()
+  ): Promise<SubscriberRow> {
+    const trimmed = rawEmail.trim();
+    const normalized = trimmed.toLowerCase();
+    const now = new Date().toISOString();
+
+    if (client) {
+      const payload: SubscriberInsert = {
+        email: trimmed,
+        normalized_email: normalized,
+        status: 'active',
+        source,
+        updated_at: now,
+      };
+
+      const { data, error } = await client
+        .from('subscribers')
+        .upsert(payload, { onConflict: 'normalized_email' })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to save subscriber: ${error.message}`);
+      }
+
+      return data;
+    }
+
+    // In-memory fallback
+    const existing = inMemorySubscribers.get(normalized);
+    if (existing) {
+      existing.status = 'active';
+      existing.updated_at = now;
+      inMemorySubscribers.set(normalized, existing);
+      return existing;
+    }
+
+    const newSubscriber: SubscriberRow = {
+      id: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      email: trimmed,
+      normalized_email: normalized,
+      status: 'active',
+      source,
+      created_at: now,
+      updated_at: now,
+    };
+    inMemorySubscribers.set(normalized, newSubscriber);
+    return newSubscriber;
+  },
+
+  /**
+   * Retrieves all active subscribers' email addresses.
+   */
+  async getActiveSubscribers(
+    client: SupabaseClient<Database> | null = getSupabaseAdminClient()
+  ): Promise<string[]> {
+    if (client) {
+      const { data, error } = await client
+        .from('subscribers')
+        .select('email')
+        .eq('status', 'active')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        throw new Error(`Failed to retrieve subscribers: ${error.message}`);
+      }
+
+      return (data || []).map((row) => row.email);
+    }
+
+    // In-memory fallback
+    return Array.from(inMemorySubscribers.values())
+      .filter((s) => s.status === 'active')
+      .map((s) => s.email);
+  },
+
+  /**
+   * Clear in-memory subscribers (primarily for unit tests).
+   */
+  clearInMemory(): void {
+    inMemorySubscribers.clear();
   },
 };

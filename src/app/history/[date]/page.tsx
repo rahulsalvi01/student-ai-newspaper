@@ -5,6 +5,7 @@ import { editionsRepo } from '../../../lib/db/repository';
 import { EditionDateParamSchema } from '../../../lib/preferences/schema';
 import { Masthead } from '../../../components/layout/Masthead';
 import { InteractiveEditionView } from '../../../components/editorial/InteractiveEditionView';
+import { CornerSubscribeButton } from '../../../components/subscription/CornerSubscribeButton';
 import { sourceRegistry } from '../../../lib/feeds/registry';
 import type { Article } from '../../../types/article';
 import type { SourceCategory } from '../../../types/sources';
@@ -146,6 +147,9 @@ export default async function ArchivedEditionPage({
           <span>TIMEZONE: ASIA/KOLKATA</span>
         </div>
       </footer>
+
+      {/* Floating Corner Red Highlighted Button */}
+      <CornerSubscribeButton />
     </div>
   );
 }

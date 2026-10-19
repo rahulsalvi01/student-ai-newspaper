@@ -3,6 +3,8 @@ import { getPublishedNewspaperData } from '../lib/feeds/service';
 import { Masthead } from '../components/layout/Masthead';
 import { InteractiveEditionView } from '../components/editorial/InteractiveEditionView';
 import { EmptyState } from '../components/editorial/EmptyState';
+import { SubscribeSection } from '../components/subscription/SubscribeSection';
+import { CornerSubscribeButton } from '../components/subscription/CornerSubscribeButton';
 
 // Ensure this page runs dynamically server-side
 export const dynamic = 'force-dynamic';
@@ -13,7 +15,7 @@ export default async function HomePage() {
   const healthyCount = data.sourceHealth.filter((s) => s.status === 'healthy').length;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 relative">
       {/* All-Source Failure or Fallback Warning Notice */}
       {data.warningNotice && (
         <aside
@@ -49,6 +51,12 @@ export default async function HomePage() {
           <InteractiveEditionView articles={data.articles} />
         )}
       </main>
+
+      {/* Dedicated Email Subscription Section */}
+      <SubscribeSection />
+
+      {/* Floating Corner Red Highlighted Button */}
+      <CornerSubscribeButton />
 
       {/* Newspaper Footer */}
       <footer className="mt-16 pt-8 pb-12 border-t-2 border-border-strong text-center text-xs text-text-muted">

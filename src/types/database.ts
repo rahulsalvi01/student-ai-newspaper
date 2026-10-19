@@ -319,6 +319,36 @@ export interface Database {
           }
         ];
       };
+      subscribers: {
+        Row: {
+          id: string;
+          email: string;
+          normalized_email: string;
+          status: 'active' | 'unsubscribed' | 'pending';
+          source: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          normalized_email: string;
+          status?: 'active' | 'unsubscribed' | 'pending';
+          source?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          normalized_email?: string;
+          status?: 'active' | 'unsubscribed' | 'pending';
+          source?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -354,3 +384,7 @@ export type EditionStoryUpdate = Database['public']['Tables']['edition_stories']
 export type GenerationRunRow = Database['public']['Tables']['generation_runs']['Row'];
 export type GenerationRunInsert = Database['public']['Tables']['generation_runs']['Insert'];
 export type GenerationRunUpdate = Database['public']['Tables']['generation_runs']['Update'];
+
+export type SubscriberRow = Database['public']['Tables']['subscribers']['Row'];
+export type SubscriberInsert = Database['public']['Tables']['subscribers']['Insert'];
+export type SubscriberUpdate = Database['public']['Tables']['subscribers']['Update'];
