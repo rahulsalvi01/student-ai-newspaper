@@ -316,20 +316,26 @@ export const editionsRepo = {
   ): Promise<EditionRow | null> {
     if (!client) return null;
 
-    const { data, error } = await client
-      .from('editions')
-      .select('*')
-      .eq('timezone', timezone)
-      .in('status', ['ready', 'partial'])
-      .order('issue_date', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    try {
+      const { data, error } = await client
+        .from('editions')
+        .select('*')
+        .eq('timezone', timezone)
+        .in('status', ['ready', 'partial'])
+        .order('issue_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (error) {
-      throw new Error(`Failed to fetch latest edition: ${error.message}`);
+      if (error) {
+        console.warn('Could not fetch latest edition:', error.message);
+        return null;
+      }
+
+      return data;
+    } catch (err) {
+      console.warn('Error querying latest edition:', err);
+      return null;
     }
-
-    return data;
   },
 
   async getAllEditions(
@@ -338,18 +344,24 @@ export const editionsRepo = {
   ): Promise<EditionRow[]> {
     if (!client) return [];
 
-    const { data, error } = await client
-      .from('editions')
-      .select('*')
-      .eq('timezone', timezone)
-      .in('status', ['ready', 'partial'])
-      .order('issue_date', { ascending: false });
+    try {
+      const { data, error } = await client
+        .from('editions')
+        .select('*')
+        .eq('timezone', timezone)
+        .in('status', ['ready', 'partial'])
+        .order('issue_date', { ascending: false });
 
-    if (error) {
-      throw new Error(`Failed to fetch editions list: ${error.message}`);
+      if (error) {
+        console.warn('Could not fetch editions list:', error.message);
+        return [];
+      }
+
+      return data || [];
+    } catch (err) {
+      console.warn('Error querying editions list:', err);
+      return [];
     }
-
-    return data || [];
   },
 
   async getEditionByDate(
@@ -359,18 +371,24 @@ export const editionsRepo = {
   ): Promise<EditionRow | null> {
     if (!client) return null;
 
-    const { data, error } = await client
-      .from('editions')
-      .select('*')
-      .eq('issue_date', issueDate)
-      .eq('timezone', timezone)
-      .maybeSingle();
+    try {
+      const { data, error } = await client
+        .from('editions')
+        .select('*')
+        .eq('issue_date', issueDate)
+        .eq('timezone', timezone)
+        .maybeSingle();
 
-    if (error) {
-      throw new Error(`Failed to fetch edition for date ${issueDate}: ${error.message}`);
+      if (error) {
+        console.warn(`Could not fetch edition for date ${issueDate}:`, error.message);
+        return null;
+      }
+
+      return data;
+    } catch (err) {
+      console.warn(`Error querying edition for date ${issueDate}:`, err);
+      return null;
     }
-
-    return data;
   },
 
   async getEditionWithStoriesByDate(
@@ -383,23 +401,29 @@ export const editionsRepo = {
   } | null> {
     if (!client) return null;
 
-    const edition = await this.getEditionByDate(issueDate, timezone, client);
-    if (!edition) return null;
+    try {
+      const edition = await this.getEditionByDate(issueDate, timezone, client);
+      if (!edition) return null;
 
-    const { data: stories, error } = await client
-      .from('edition_stories')
-      .select('*, article:articles(*)')
-      .eq('edition_id', edition.id)
-      .order('rank', { ascending: true });
+      const { data: stories, error } = await client
+        .from('edition_stories')
+        .select('*, article:articles(*)')
+        .eq('edition_id', edition.id)
+        .order('rank', { ascending: true });
 
-    if (error) {
-      throw new Error(`Failed to fetch edition stories: ${error.message}`);
+      if (error) {
+        console.warn(`Could not fetch edition stories:`, error.message);
+        return null;
+      }
+
+      return {
+        edition,
+        stories: (stories as unknown as (EditionStoryRow & { article: ArticleRow })[]) || [],
+      };
+    } catch (err) {
+      console.warn(`Error querying edition with stories:`, err);
+      return null;
     }
-
-    return {
-      edition,
-      stories: (stories as unknown as (EditionStoryRow & { article: ArticleRow })[]) || [],
-    };
   },
 };
 
