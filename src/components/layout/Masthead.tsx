@@ -31,7 +31,7 @@ export function Masthead({
         second: '2-digit',
       });
     } catch {
-      return '08:00:00 IST';
+      return '07:00:00 IST';
     }
   }, [updatedAt]);
 

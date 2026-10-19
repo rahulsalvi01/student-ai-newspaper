@@ -1,7 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fetchArticlesFromSource } from '../src/lib/feeds/service';
+import {
+  fetchArticlesFromSource,
+  getPublishedNewspaperData,
+  getLiveNewspaperData,
+} from '../src/lib/feeds/service';
 import type { Source } from '../src/types/sources';
 import * as parser from '../src/lib/feeds/parser';
+import * as clientModule from '../src/lib/db/client';
+import { editionsRepo, sourcesRepo } from '../src/lib/db/repository';
 
 describe('Server-Side Feed Service Unit Tests', () => {
   it('correctly maps valid feed entries into typed Article objects with provenance', async () => {
@@ -104,3 +110,87 @@ describe('Server-Side Feed Service Unit Tests', () => {
     expect(result.articles).toHaveLength(0);
   });
 });
+
+describe('getPublishedNewspaperData & Live Fetch Restriction Tests', () => {
+  it('loads persisted edition from repository without calling feed scraper parser', async () => {
+    const fetchSpy = vi.spyOn(parser, 'fetchFeedXml');
+
+    const mockEdition = {
+      id: 'ed-1',
+      issue_date: '2026-10-19',
+      timezone: 'Asia/Kolkata',
+      status: 'ready' as const,
+      headline: 'The Daily AI Brief',
+      generated_at: '2026-10-19T01:30:00.000Z',
+      article_count: 1,
+      created_at: '2026-10-19T01:30:00.000Z',
+      generation_run_id: null,
+    };
+
+    const mockStories = [
+      {
+        edition_id: 'ed-1',
+        article_id: 'art-1',
+        rank: 1,
+        section: 'models_releases',
+        summary: 'Important release summary',
+        summary_kind: 'source_snippet' as const,
+        created_at: '2026-10-19T01:30:00.000Z',
+        article: {
+          id: 'art-1',
+          source_id: '11111111-1111-1111-1111-111111111111',
+          canonical_url: 'https://openai.com/news/release',
+          title: 'GPT-5 Model Architecture',
+          description: 'Model details',
+          author: 'OpenAI',
+          published_at: '2026-10-19T00:00:00.000Z',
+          fetched_at: '2026-10-19T01:30:00.000Z',
+          language: 'en',
+          category: 'models_releases',
+          content_hash: null,
+          created_at: '2026-10-19T01:30:00.000Z',
+        },
+      },
+    ];
+
+    vi.spyOn(clientModule, 'isDatabaseConfigured').mockReturnValue(true);
+    vi.spyOn(editionsRepo, 'getLatestEdition').mockResolvedValue(mockEdition);
+    vi.spyOn(editionsRepo, 'getEditionWithStoriesByDate').mockResolvedValue({
+      edition: mockEdition,
+      stories: mockStories,
+    });
+    vi.spyOn(sourcesRepo, 'getAllSources').mockResolvedValue([]);
+
+    const data = await getPublishedNewspaperData();
+
+    // Verify zero calls to external feed XML scraper
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(data.articles).toHaveLength(1);
+    expect(data.articles[0].title).toBe('GPT-5 Model Architecture');
+    expect(data.editionStatus).toBe('ready');
+  });
+
+  it('returns scheduled waiting notice when database is empty instead of scraping feeds', async () => {
+    const fetchSpy = vi.spyOn(parser, 'fetchFeedXml');
+
+    vi.spyOn(clientModule, 'isDatabaseConfigured').mockReturnValue(true);
+    vi.spyOn(editionsRepo, 'getLatestEdition').mockResolvedValue(null);
+
+    const data = await getPublishedNewspaperData();
+
+    // Verify zero calls to external feed XML scraper
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(data.articles).toHaveLength(0);
+    expect(data.warningNotice).toContain('07:00 AM IST');
+  });
+
+  it('getLiveNewspaperData delegates to getPublishedNewspaperData when forceFresh is not set', async () => {
+    vi.spyOn(clientModule, 'isDatabaseConfigured').mockReturnValue(true);
+    vi.spyOn(editionsRepo, 'getLatestEdition').mockResolvedValue(null);
+
+    const data = await getLiveNewspaperData({ forceFresh: false });
+    expect(data.articles).toHaveLength(0);
+    expect(data.warningNotice).toContain('07:00 AM IST');
+  });
+});
+

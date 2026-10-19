@@ -11,7 +11,12 @@ describe('GitHub Actions Workflow: Daily Newspaper & Gmail Delivery Spec', () =>
 
   const content = fs.readFileSync(workflowPath, 'utf-8');
 
-  it('1. Schedule Target: configured for 08:00 Asia/Kolkata (02:30 UTC)', () => {
+  it('1. Schedule Target: configured for 07:00 Asia/Kolkata (01:30 UTC) for news creation', () => {
+    // 07:00 IST = 01:30 UTC
+    expect(content).toContain('cron: "30 1 * * *"');
+  });
+
+  it('1b. Schedule Target: configured for 08:00 Asia/Kolkata (02:30 UTC) for email delivery', () => {
     // 08:00 IST = 02:30 UTC
     expect(content).toContain('cron: "30 2 * * *"');
   });

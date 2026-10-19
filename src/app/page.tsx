@@ -1,5 +1,5 @@
 import React from 'react';
-import { getLiveNewspaperData } from '../lib/feeds/service';
+import { getPublishedNewspaperData } from '../lib/feeds/service';
 import { Masthead } from '../components/layout/Masthead';
 import { InteractiveEditionView } from '../components/editorial/InteractiveEditionView';
 import { EmptyState } from '../components/editorial/EmptyState';
@@ -8,8 +8,8 @@ import { EmptyState } from '../components/editorial/EmptyState';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  // Fetch and prioritize top 100 quality articles from real sources / persisted edition
-  const data = await getLiveNewspaperData({ limit: 100 });
+  // Load the persisted top prioritized articles from real sources / published edition
+  const data = await getPublishedNewspaperData({ limit: 100 });
   const healthyCount = data.sourceHealth.filter((s) => s.status === 'healthy').length;
 
   return (

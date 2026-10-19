@@ -1,10 +1,22 @@
 name: Daily newspaper generation
 
 on:
-  # Internal GitHub schedule is replaced by cron-job.org for precise 08:00 IST triggering.
-  # schedule:
-  #   - cron: "30 2 * * *"
+  schedule:
+    # 1. Daily news creation at 07:00 AM Asia/Kolkata (01:30 UTC)
+    - cron: "30 1 * * *"
+    # 2. Daily email dispatch at 08:00 AM Asia/Kolkata (02:30 UTC)
+    - cron: "30 2 * * *"
   workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to run (all, generate_only, email_only)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - generate_only
+          - email_only
 
 permissions:
   contents: read
@@ -19,6 +31,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Trigger protected generation endpoint
+        if: github.event.schedule == '30 1 * * *' || github.event_name == 'workflow_dispatch'
         env:
           GENERATE_URL: ${{ secrets.NEWSPAPER_GENERATE_URL }}
           GENERATE_SECRET: ${{ secrets.NEWSPAPER_GENERATE_SECRET }}
@@ -83,7 +96,9 @@ jobs:
           "
 
       - name: Email the ready edition link to Gmail
+        if: github.event.schedule == '30 2 * * *' || github.event_name == 'workflow_dispatch'
         env:
+          GENERATE_URL: ${{ secrets.NEWSPAPER_GENERATE_URL }}
           GMAIL_ADDRESS: ${{ secrets.NEWSPAPER_GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.NEWSPAPER_GMAIL_APP_PASSWORD }}
           RECIPIENT_EMAIL: ${{ secrets.NEWSPAPER_RECIPIENT_EMAIL }}
@@ -95,6 +110,7 @@ jobs:
           import smtplib
           import ssl
           import sys
+          import urllib.request
           from email.message import EmailMessage
           from urllib.parse import urlparse
 
@@ -107,12 +123,42 @@ jobs:
           if not gmail or not app_password:
               sys.exit("::error::Missing Gmail Actions secrets. Configure NEWSPAPER_GMAIL_ADDRESS and NEWSPAPER_GMAIL_APP_PASSWORD; NEWSPAPER_RECIPIENT_EMAIL is optional.")
 
-          with open("/tmp/generate-response.json", "r", encoding="utf-8") as f:
-              result = json.load(f)
+          edition_url = None
+          issue_date = "Today's edition"
+          article_count = None
 
-          edition_url = result.get("editionUrl")
-          issue_date = result.get("issueDate", "Today's edition")
-          article_count = result.get("articleCount")
+          # 1. If /tmp/generate-response.json exists (e.g. from manual run or step 1), use it
+          if os.path.exists("/tmp/generate-response.json"):
+              try:
+                  with open("/tmp/generate-response.json", "r", encoding="utf-8") as f:
+                      result = json.load(f)
+                  edition_url = result.get("editionUrl")
+                  issue_date = result.get("issueDate", "Today's edition")
+                  article_count = result.get("articleCount")
+              except Exception:
+                  pass
+
+          # 2. If running standalone at 08:00 AM, fetch latest ready edition from server
+          if not edition_url:
+              gen_url = os.environ.get("GENERATE_URL", "").strip().strip('"').strip("'")
+              base_url = gen_url.replace("/api/generate", "").rstrip("/")
+              if not base_url:
+                  sys.exit("::error::Missing GENERATE_URL secret to determine website URL.")
+
+              try:
+                  req = urllib.request.Request(f"{base_url}/api/editions", headers={"User-Agent": "GitHub-Actions-Email-Step"})
+                  with urllib.request.urlopen(req, timeout=30) as resp:
+                      ed_data = json.loads(resp.read().decode("utf-8"))
+                  editions = ed_data.get("editions", [])
+                  if editions:
+                      latest = editions[0]
+                      issue_date = latest.get("issue_date", "Today's edition")
+                      article_count = latest.get("article_count", 0)
+                      edition_url = f"{base_url}/history/{issue_date}"
+                  else:
+                      edition_url = f"{base_url}/"
+              except Exception as exc:
+                  sys.exit(f"::error::Could not query editions from {base_url}/api/editions: {exc}")
 
           parsed_url = urlparse(edition_url) if isinstance(edition_url, str) else None
           if not parsed_url or parsed_url.scheme != "https" or not parsed_url.netloc:

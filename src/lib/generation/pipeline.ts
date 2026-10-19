@@ -68,6 +68,17 @@ export function getIssueDateString(date: Date = new Date(), timezone = 'Asia/Kol
 }
 
 /**
+ * Parse a YYYY-MM-DD string into a midday UTC Date object.
+ */
+export function parseDateOnly(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (y && m && d) {
+    return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  }
+  return new Date();
+}
+
+/**
  * Format a human-readable issue date for a specific timezone.
  */
 export function getFormattedIssueDate(date: Date = new Date(), timezone = 'Asia/Kolkata'): string {
@@ -199,13 +210,7 @@ export async function runIngestionPipeline(
   const limit = options?.limit ?? 100;
   const maxAgeDays = options?.maxAgeDays ?? 30;
   const now = Date.now();
-  let targetDate = new Date();
-  if (options?.issueDate) {
-    const [y, m, d] = options.issueDate.split('-').map(Number);
-    if (y && m && d) {
-      targetDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-    }
-  }
+  const targetDate = options?.issueDate ? parseDateOnly(options.issueDate) : new Date();
   const rawIssueDate = options?.issueDate || getIssueDateString(targetDate, timezone);
   const formattedIssueDate = getFormattedIssueDate(targetDate, timezone);
 
@@ -459,9 +464,17 @@ export async function runIngestionPipeline(
   let persistedArticlesCount = 0;
   if (isDatabaseConfigured()) {
     try {
-      // Persist articles
+      // Fetch registered sources from DB to obtain their genuine database UUIDs
+      const dbSources = await sourcesRepo.getAllSources();
+      const sourceUrlToIdMap = new Map<string, string>();
+      for (const s of dbSources) {
+        sourceUrlToIdMap.set(s.feed_url, s.id);
+      }
+      const defaultSourceId = dbSources[0]?.id;
+
+      // Persist articles with genuine source UUID foreign keys
       const articleInserts = prioritized.map((a) => ({
-        source_id: a.sourceId,
+        source_id: sourceUrlToIdMap.get(a.originalFeedUrl) || defaultSourceId || a.sourceId,
         canonical_url: a.canonicalUrl,
         title: a.title,
         description: a.description,
@@ -483,20 +496,25 @@ export async function runIngestionPipeline(
         runId,
       });
 
-      // Add ranked stories to edition
+      // Add ranked stories to edition preserving the exact prioritized rank order
       if (persistedArticles.length > 0) {
-        const editionStories = persistedArticles.map((art, idx) => {
-          const original = prioritized.find((p) => p.canonicalUrl === art.canonical_url);
-          return {
-            articleId: art.id,
-            rank: idx + 1,
-            section: art.category || 'general_ai',
-            summary: original?.description || art.description,
-            summaryKind: (original?.summaryKind || 'source_snippet') as SummaryKind,
-          };
-        });
+        const editionStories = prioritized
+          .map((p, idx) => {
+            const dbArt = persistedArticles.find((art) => art.canonical_url === p.canonicalUrl);
+            if (!dbArt) return null;
+            return {
+              articleId: dbArt.id,
+              rank: idx + 1,
+              section: p.category || dbArt.category || 'general_ai',
+              summary: p.description || dbArt.description,
+              summaryKind: (p.summaryKind || 'source_snippet') as SummaryKind,
+            };
+          })
+          .filter((s): s is NonNullable<typeof s> => s !== null);
 
-        await editionsRepo.addStoriesToEdition(dbEdition.id, editionStories);
+        if (editionStories.length > 0) {
+          await editionsRepo.addStoriesToEdition(dbEdition.id, editionStories);
+        }
       }
 
       if (runId) {
@@ -549,4 +567,11 @@ export function resetPipelineCaches(): void {
  */
 export function setSimulatedLastGoodEdition(edition: NewspaperPageData): void {
   lastGoodEditionCache = edition;
+}
+
+/**
+ * Get active in-memory cached edition if available.
+ */
+export function getCachedEdition(): NewspaperPageData | null {
+  return cachedData || lastGoodEditionCache;
 }
