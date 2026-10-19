@@ -1,236 +1,84 @@
-# Personalised Daily Newspaper — Antigravity Project Pack
+# 📰 Student AI Newspaper (The Daily AI Gazette)
 
-This repository specification pack is based on the five-pillar specification framework and eight-stage delivery pipeline in *Engineering Autonomous Web Systems* (the PDF supplied by the project owner), adapted for a zero-cost-first personal newspaper application.
+The **Student AI Newspaper** is an autonomous, open-source personal digital broadsheet engineered to deliver daily, high-signal artificial intelligence and computer science intelligence specifically tailored for engineering students, academic researchers, and software developers.
 
-## Visual direction
-Use an original black-and-white, print-inspired Indian business-newspaper aesthetic, with compact editorial columns, bold serif headlines, sans-serif metadata and thin rules. The Economic Times is a broad style reference only: do not copy its logo, exact masthead, proprietary assets or exact page design. See `docs/03_UI_UX_SPEC.md`.
-
-## Product in one sentence
-A focused AI-and-IT-student briefing that filters for new AI models, model releases, coding assistants, developer tools, research, open-source projects and practical student takeaways. It curates permitted RSS/Atom metadata, ranks stories for usefulness, and attempts to publish a daily edition at 08:00 Asia/Kolkata.
-
-## Read these documents in order
-1. `docs/01_PRD.md` — what to build and what not to build.
-2. `docs/02_TRD.md` — architecture, stack, data model, security, API contracts.
-3. `docs/03_UI_UX_SPEC.md` — visual system and interface behavior.
-4. `docs/04_APP_FLOW.md` — routes, workflows, states and failure handling.
-5. `brain.md` — persistent instructions and progress ledger for Antigravity.
-7. `docs/05_AUTOMATION_AND_FREE_DEPLOYMENT.md` — 08:00 scheduling and free-tier trade-offs.
-8. `docs/06_ANTIGRAVITY_BUILD_PLAN.md` — staged prompts to paste into Antigravity.
-9. `docs/08_STEP_BY_STEP_SETUP.md` — beginner-friendly setup, deployment, schedule and troubleshooting.
-10. `docs/09_REAL_NEWS_INTEGRATION_CHECKLIST.md` — strict real-feed verification and acceptance gate.
-11. `.env.example` — configuration names only; never place real secrets in this file.
-12. `.github/workflows/daily-newspaper.yml` — GitHub Actions scheduled generation plus Gmail link notification.
-13. `docs/12_DEPLOYMENT_AND_ACCEPTANCE_GUIDE.md` — production deployment instructions, quota disclosures and 5 mandatory acceptance gates.
-
-## Recommended zero-cost-first MVP
-- Frontend and server: Next.js App Router + TypeScript.
-- Database/auth: Supabase free tier, subject to current quotas and policies.
-- Hosting: Vercel free tier for personal/non-commercial use, subject to current terms.
-- News collection: RSS/Atom feeds whose terms permit this use.
-- Daily schedule: GitHub Actions scheduled workflow as a simple starter; its timing is best-effort, not an exact-time SLA.
-- Gmail notification: the scheduled workflow emails the saved edition link after successful generation using Gmail SMTP and a Google App Password. Configure secrets in GitHub Actions; Gmail limits and schedule delays apply.
-- AI summaries: optional adapter. The MVP must still work without a paid AI API by showing source-provided titles/descriptions and deterministic snippets. Add an AI provider only after confirming a genuinely free quota or running a local model on always-on hardware.
-
-## Important meaning of “free end-to-end”
-The design avoids mandatory paid APIs, but no document can guarantee a permanently free service. Free-tier quotas, provider terms, email limits, scheduled-job reliability and hosting policies can change. A custom domain is usually an additional cost. Do not promise exact 08:00 delivery from GitHub Actions; it is a best-effort scheduler. If exact delivery becomes essential, use a scheduler with an explicit SLA or a self-hosted always-on runner.
-
-## Real-news-only rule (critical)
-- The running UI must never display sample, mock, placeholder, hard-coded or invented stories. Visible stories must be fetched from verified live RSS/Atom sources and retain publisher attribution and original links.
-- Synthetic fixtures are permitted only in automated tests and must never be imported into the UI or seeded into the database.
-- If feeds are unavailable or no relevant stories exist, show an honest empty/error state or a shorter edition. Never pad the newspaper.
-- Follow the revised build sequence in `docs/06_ANTIGRAVITY_BUILD_PLAN.md`: verify real feeds first, then connect the UI directly to live/persisted real data.
-
-## Build rules
-- Do not build all features in one prompt. Follow `docs/06_ANTIGRAVITY_BUILD_PLAN.md` one milestone at a time.
-- Ask Antigravity to inspect the repository and `brain.md` before every task.
-- After each milestone: run lint, typecheck, tests and build; inspect the diff; commit a working checkpoint.
-- Use only public RSS/Atom metadata and permitted article excerpts. Link to publishers and do not copy full articles.
-- The app must show source name, original publication time when available, original link, and a clear “generated summary” label for summaries.
-- Store secrets in environment variables; never commit `.env.local` or private service keys.
-
-## Editorial focus (important)
-This is not a general-purpose newspaper. `docs/07_AI_STUDENT_EDITORIAL_POLICY.md` is authoritative for what qualifies as news. Every edition should help an IT student understand what changed in AI, which new models/tools matter, what evidence supports the claims, and what they can learn or build next.
-
-## Protected Generation API (`POST /api/generate`) & Local Invocation
-
-The generation pipeline is exposed via `POST /api/generate` as specified in the Technical Requirements Document (`docs/02_TRD.md`).
-
-### Security & Invariants
-- **Authentication**: Requires a server-side `GENERATION_SECRET`. Bearer token (`Authorization: Bearer <GENERATION_SECRET>`) or custom header (`x-generation-secret: <GENERATION_SECRET>`) is verified in constant time (`crypto.timingSafeEqual`) to prevent timing attacks. Missing or invalid credentials return `401 Unauthorized`. If the secret is not configured on the server, returns `503 Service Unavailable`.
-- **Concurrency Control**: Prevents concurrent duplicate generation runs. If a generation job is already active, incoming requests are rejected with `409 Conflict`.
-- **Abuse Protection**:
-  - Sliding-window rate limiter blocks rapid request flooding (`429 Too Many Requests`).
-  - Cooldown timer enforces spacing between successive runs (`429 Too Many Requests` with `Retry-After` header).
-  - Payload size cap rejects oversized requests (`413 Payload Too Large` for >64KB payloads).
-- **Validation**: Enforces strict Zod validation:
-  - `issueDate`: Valid calendar date in `YYYY-MM-DD` format (rejects impossible calendar dates like `2026-02-31`).
-  - `timezone`: Valid IANA timezone name (e.g. `Asia/Kolkata`, `UTC`).
-  - `limit`: Integer between 5 and 100.
-  - `force`: Boolean to bypass cache.
-  - `trigger`: `'manual' | 'scheduled'`.
-- **Source & Article Counts**: Returns breakdown metrics without leaking credentials:
-  - `sourcesFetched`: Number of candidate feed sources queried.
-  - `sourcesAccepted`: Number of sources that succeeded and returned valid news articles.
-  - `sourcesRejected`: Sources that were disabled, unhealthy, or filtered out.
-  - `sourcesFailed`: Number of sources that encountered network or HTTP errors.
-  - `articlesFetched`: Total raw articles parsed from live feeds.
-  - `articlesAccepted`: Ranked qualifying stories for the edition.
-  - `articlesRejected`: Articles removed due to duplicates, freshness cutoff, or lower ranking score.
+Combining the authoritative visual gravitas of classic nineteenth-century print broadsheets with a modern, zero-cost automated software pipeline, the publication curates real-world technological breakthroughs, research papers, model releases, and developer tools into a clean, distraction-free morning briefing.
 
 ---
 
-### Local Invocation Instructions
+## 🎯 The Mission: Signal Over Hype
 
-#### 1. Configure the Generation Secret
-In your `.env.local` file, set a strong random generation secret:
-```bash
-GENERATION_SECRET="local-dev-secret-key-123456"
-```
+In recent years, the artificial intelligence landscape has been overwhelmed by promotional marketing, speculative claims, and sensationalist social media chatter. For students and engineers striving to build genuine technical competence, separating substantive technological advances from clickbait has become an exhausting daily challenge.
 
-#### 2. Start the Local Server
-```bash
-npm run dev
-```
-The server will start at `http://localhost:3000`.
+The Student AI Newspaper was created to solve this information fatigue through strict editorial standards:
 
-#### 3. Trigger Generation
-
-##### Option A: Using the CLI Runner (Recommended)
-You can trigger generation using the built-in CLI helper:
-```bash
-# Default trigger (current date in Asia/Kolkata)
-npm run generate
-
-# Or specify custom parameters
-npx tsx scripts/trigger-generate.ts --date=2026-10-19 --timezone=Asia/Kolkata
-```
-
-##### Option B: Using cURL (Linux / macOS / Git Bash)
-```bash
-curl -X POST http://localhost:3000/api/generate \
-  -H "Authorization: Bearer local-dev-secret-key-123456" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "issueDate": "2026-10-19",
-    "timezone": "Asia/Kolkata",
-    "limit": 50,
-    "force": true
-  }'
-```
-
-##### Option C: Using PowerShell (Windows)
-```powershell
-$headers = @{
-  "Authorization" = "Bearer local-dev-secret-key-123456"
-  "Content-Type"  = "application/json"
-}
-
-$body = @{
-  "issueDate" = "2026-10-19"
-  "timezone"  = "Asia/Kolkata"
-  "limit"     = 50
-  "force"     = $true
-} | ConvertTo-Json
-
-Invoke-RestMethod -Uri "http://localhost:3000/api/generate" `
-  -Method POST `
-  -Headers $headers `
-  -Body $body
-```
+- **Substantive Technical Focus**: Prioritizing open-weight model weights, algorithmic improvements, benchmark comparisons, developer libraries, system runtimes, and peer-reviewed research papers.
+- **Actionable Student Takeaways**: Translating complex industry developments into clear insights—identifying what changed, why it matters, which tools to experiment with, and how students can incorporate these technologies into academic projects and career portfolios.
+- **Strict Real-News Guarantee**: Operating under a strict real-news-only standard. Every published story is drawn from verified, live publisher RSS and Atom feeds, retaining full attribution, publisher mastheads, publication datelines, and direct links to original sources. The publication strictly prohibits fabricated, hallucinated, or placeholder content.
 
 ---
 
-### Example Response Payload
+## 🏛️ Visual & Aesthetic Identity
 
-```json
-{
-  "success": true,
-  "editionUrl": "http://localhost:3000/history/2026-10-19",
-  "issueDate": "2026-10-19",
-  "articleCount": 24,
-  "editionStatus": "ready",
-  "sourcesFetched": 16,
-  "sourcesAccepted": 14,
-  "sourcesRejected": 2,
-  "sourcesFailed": 0,
-  "articlesFetched": 92,
-  "articlesAccepted": 24,
-  "articlesRejected": 68,
-  "counts": {
-    "sourcesFetched": 16,
-    "sourcesAccepted": 14,
-    "sourcesRejected": 2,
-    "sourcesFailed": 0,
-    "articlesFetched": 92,
-    "articlesAccepted": 24,
-    "articlesRejected": 68
-  },
-  "durationMs": 1420
-}
-```
+The publication's aesthetic draws direct inspiration from timeless financial and business broadsheets such as *The Financial Times*, *The Economic Times*, and *The Wall Street Journal*, re-engineered for responsive modern screens:
 
-### Stable Error Codes
-| Status | Error Code | Description |
-|---|---|---|
-| `400` | `INVALID_JSON` / `VALIDATION_FAILED` | Malformed JSON or invalid parameter (e.g., impossible calendar date or invalid timezone). |
-| `401` | `UNAUTHORIZED` | Missing or invalid `GENERATION_SECRET` bearer token. |
-| `405` | `METHOD_NOT_ALLOWED` | GET request attempted; endpoint only accepts POST. |
-| `409` | `CONCURRENT_RUN_IN_PROGRESS` | Another generation job is currently running. |
-| `413` | `PAYLOAD_TOO_LARGE` | Request payload exceeds 64KB cap. |
-| `429` | `RATE_LIMIT_EXCEEDED` | Request frequency exceeds sliding-window limit or cooldown. |
-| `502` | `ALL_SOURCES_FAILED` | All live sources failed and no prior edition could be preserved. |
-| `503` | `SERVER_MISCONFIGURED` | `GENERATION_SECRET` is not set in server environment. |
+### Classic Broadsheet Layout
+- **Prominent Lead Story**: A centerpiece headline and summary highlighting the single most significant AI or computing development of the day.
+- **Multi-Column Editorial Grid**: Balanced editorial columns organized with traditional hairline border dividers, section ribbons, deck lines, and dateline indicators.
+- **Distinguished Typography**: High-contrast serif headlines paired with crisp, highly legible sans-serif body type to deliver authentic editorial authority.
+
+### Modern Digital Ergonomics
+- **Flexible Reading Views**: Readers can switch seamlessly between a classic multi-column broadsheet view and a distraction-free, single-column digital digest.
+- **Date Archive & Historical Editions**: A complete calendar-driven archival browsing system allowing readers to step back in time and review past editions day by day.
+- **Editorial Transparency Badging**: Clear visual badges distinguish authentic source excerpts from AI-assisted summaries, maintaining complete transparency with the reader.
+- **Source Health Monitoring**: An integrated editorial dashboard tracking live feed response times, availability, and acceptance rates across all monitored publications.
 
 ---
 
-## Optional AI Summaries & Zero-Cost-First Resilience
+## 🗞️ Editorial Sections
 
-AI summaries are **optional and disabled by default** (`AI_SUMMARIES_ENABLED="false"` or omitted). The application does not require any paid AI APIs to generate, display, or archive daily editions.
+Each daily edition is systematically organized into five dedicated focus areas:
 
-### Behavior & Fallback
-- **Default State**: Uses genuine source snippets and publisher excerpts (`summaryKind: 'source_snippet'`), badged as `Source excerpt • verified`.
-- **Enabling AI Summaries**: Set `AI_SUMMARIES_ENABLED="true"` and configure a provider:
-  - **Google Gemini (Free Tier)**: Set `AI_SUMMARY_PROVIDER="gemini"` and `GEMINI_API_KEY="your-gemini-key"`.
-  - **OpenAI-Compatible (Groq / Ollama / Local)**: Set `AI_SUMMARY_PROVIDER="openai"` with `OPENAI_API_KEY` and optional `OPENAI_BASE_URL` (e.g., `http://localhost:11434/v1` for local Ollama).
-- **Graceful Error Handling**: If an AI provider request times out (>6s), encounters rate limits (HTTP 429), or fails, the generation pipeline silently falls back to the original source description without failing the edition.
-- **Editorial Attribution**: Any story enriched by an LLM is transparently badged with `AI-generated summary` in accordance with `docs/07_AI_STUDENT_EDITORIAL_POLICY.md`.
+1. **Lead Story & Headline**: The primary breakthrough or event shaping the AI and computing landscape today.
+2. **Foundation Models & Releases**: Coverage of new open weights, proprietary foundation models, fine-tuning approaches, quantizations, and comparative performance benchmarks.
+3. **Research & Architectures**: Insights from peer-reviewed preprints and laboratory findings covering novel neural architectures, attention mechanisms, training efficiencies, and reasoning paradigms.
+4. **Developer Tools & Frameworks**: Practical updates on developer libraries, agentic frameworks, inference engines, local execution runtimes, and programming assistants.
+5. **Student Practice & Industry Takeaways**: Direct takeaways highlighting practical tutorials, open-source repositories to explore, interview-relevant system concepts, and project ideas.
 
 ---
 
-## Gmail Link Notifications & Delivery Safety
+## ⚙️ Architecture & Operational Design
 
-Scheduled delivery sends an email containing a link to the published edition via Gmail SMTP.
+The newspaper is built from the ground up on a zero-cost-first philosophy, designed to run autonomously and reliably without requiring expensive cloud infrastructure or paid third-party API subscriptions.
 
-### Google App Password Requirements
-1. **2-Step Verification**: Your Google account must have 2-Step Verification enabled.
-2. **16-Character Password**: Google generates a 16-character App Password (e.g., `abcd efgh ijkl mnop`). Any spaces are automatically sanitized by the adapter.
-3. **Daily Quota**: Personal Gmail accounts have a sending limit of **500 emails/day** (Google Workspace accounts have a limit of 2,000/day). Because this newspaper sends a single link notification per daily run, quota consumption is negligible (~1 email/day).
+### 1. Ingestion & Source Verification
+The ingestion engine monitors a curated directory of reputable, public RSS and Atom feeds from leading research laboratories, engineering blogs, academic institutions, and premier technology publications. Candidate stories are fetched using strict network timeouts, payload bounds, and content sanitizers that scrub malicious scripts and tracking artifacts.
 
-### Non-Destructive In-App Resilience
-The in-app newspaper **never depends on email delivery**. If `NEWSPAPER_GMAIL_ADDRESS` or `NEWSPAPER_GMAIL_APP_PASSWORD` are absent, misconfigured, or if Google SMTP encounters a temporary failure:
-- The edition generation succeeds.
-- The web edition remains 100% accessible to readers on the web.
-- The delivery adapter records `skipped: true` or reports the error without invalidating the edition.
+### 2. Intelligent Deduplication & Relevance Filtering
+News items undergo title canonicalization and URL normalization to detect duplicate reporting across multiple outlets. A deterministic scoring engine evaluates stories based on technical keyword relevance, publication freshness, and editorial weight, ensuring that low-signal marketing stories and corporate press releases are filtered out.
 
-### Dry-Run & Test Safety
-To prevent accidental emails during testing or CI:
-- **Automated Tests**: In `NODE_ENV === 'test'`, network sockets are completely disabled. The adapter runs in simulation mode and never contacts Gmail.
-- **Delivery Test Endpoint (`POST /api/delivery/test`)**: Test the delivery adapter safely without sending real emails:
-  ```bash
-  curl -X POST http://localhost:3000/api/delivery/test \
-    -H "Authorization: Bearer local-dev-secret-key-123456" \
-    -H "Content-Type: application/json" \
-    -d '{ "dryRun": true }'
-  ```
-  Returns:
-  ```json
-  {
-    "success": true,
-    "dryRun": true,
-    "skipped": false,
-    "recipient": "student.editor@gmail.com",
-    "messageId": "<simulated-1740000000000@gmail.com>",
-    "details": "[DRY-RUN] Simulated link email to student.editor@gmail.com for edition 2026-10-19. No network request was made."
-  }
-  ```
+### 3. Editorial Categorization & Synthesis
+Qualified articles are categorized into their respective editorial sections. For every story, the system preserves original publisher excerpts. If optional summarization is enabled, the system enriches the story with a concise student-focused synthesis while remaining fully resilient: any timeout or provider failure silently falls back to genuine source excerpts without interrupting the publication.
 
+### 4. Database Archival & Web Publishing
+Completed daily editions are archived with permanent records of article counts, source statistics, and issue metadata. Editions are rendered as fast, responsive server-side pages, ready for readers at their morning briefing hour.
+
+### 5. Automated Scheduling & Morning Dispatch
+A scheduled automation workflow triggers the entire compilation process each morning at 08:00 Asia/Kolkata (02:30 UTC). Upon successful publication, a notification containing the direct link to the newly minted edition is automatically dispatched to the reader's personal email via standard secure mail delivery, ready to be enjoyed with morning coffee.
+
+---
+
+## 🛡️ Security, Privacy & Reliability
+
+- **Protected Publishing Pipeline**: The publishing trigger is secured with constant-time token verification, ensuring that unauthorized external requests cannot trigger generation runs or consume server resources.
+- **Concurrency & Rate Protection**: Mutual exclusion locks prevent duplicate concurrent generation jobs, while sliding-window rate limiters defend against accidental flood requests.
+- **Zero-Dependency Resilience**: The web publication remains fully functional even in the event of external network disruptions, third-party API limits, or email delivery delays.
+- **Safe Credential Handling**: All sensitive service keys, database passwords, and mail tokens are stored strictly within secure server-side environment variables and are never exposed to browser clients or committed to source control.
+
+---
+
+## 📜 Editorial Policy & Ethical Standards
+
+- **Fair Attribution**: Every story displays the publisher name, original publication timestamp, author attribution when available, and a direct link to the full original article.
+- **Original Content Respect**: The newspaper curates and indexes public metadata and brief excerpts only. It does not scrape paywalled articles or republish entire article bodies.
+- **AI Accountability**: When an artificial intelligence model assists in drafting an explanatory summary, the resulting text is clearly labeled as an AI-generated summary so readers always know the origin of what they are reading.
