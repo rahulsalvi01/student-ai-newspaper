@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { subscribersRepo } from '../../../lib/db/repository';
-import { syncSubscribersToGitHubSecret } from '../../../lib/github/secrets';
 import { checkSubscriptionRateLimit } from '../../../lib/security/subscription-rate-limiter';
 
 const SubscribeSchema = z.object({
@@ -62,15 +61,11 @@ export async function POST(req: NextRequest) {
     // 3. Persist subscriber to database
     await subscribersRepo.addSubscriber(email, source);
 
-    // 4. Synchronize with GitHub Actions recipient secret
-    const syncResult = await syncSubscribersToGitHubSecret();
-
     return NextResponse.json(
       {
         success: true,
         message: 'Successfully subscribed to the daily edition! Tomorrow’s briefing will arrive at 8:00 AM IST.',
         email,
-        synced: syncResult.synced,
       },
       { status: 200 }
     );

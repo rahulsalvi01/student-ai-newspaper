@@ -15,7 +15,7 @@ export default async function HomePage() {
   const healthyCount = data.sourceHealth.filter((s) => s.status === 'healthy').length;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 relative">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 relative">
       {/* All-Source Failure or Fallback Warning Notice */}
       {data.warningNotice && (
         <aside
@@ -41,7 +41,7 @@ export default async function HomePage() {
       />
 
       {/* Main Content: Interactive search/filters connected to real persisted stories */}
-      <main className="mt-8">
+      <main className="mt-4 sm:mt-8">
         {data.articles.length === 0 ? (
           <EmptyState
             sourceHealth={data.sourceHealth}

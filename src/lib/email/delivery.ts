@@ -127,8 +127,6 @@ export async function sendEditionEmailNotification(
   const creds = validateGmailCredentials();
   const recipient = (
     options.recipientEmail ||
-    process.env.NEWSPAPER_RECIPIENT_EMAIL ||
-    process.env.RECIPIENT_EMAIL ||
     creds.senderEmail ||
     'reader@example.com'
   ).trim();

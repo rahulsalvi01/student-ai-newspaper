@@ -68,7 +68,7 @@ export function SectionGrid({ articles }: SectionGridProps) {
           </div>
 
           {/* Consistent 3-column grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {topBriefStories.map((story) => (
               <StoryCard key={story.id} article={story} />
             ))}
@@ -93,7 +93,7 @@ export function SectionGrid({ articles }: SectionGridProps) {
             </div>
 
             {/* Consistent 3-column grid: maintains 3 columns across desktop as user scrolls */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {cat.stories.map((story) => (
                 <StoryCard key={story.id} article={story} />
               ))}

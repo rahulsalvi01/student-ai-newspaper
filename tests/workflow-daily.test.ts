@@ -36,7 +36,6 @@ describe('GitHub Actions Workflow: Daily Newspaper & Gmail Delivery Spec', () =>
     expect(content).toContain('${{ secrets.NEWSPAPER_GENERATE_SECRET }}');
     expect(content).toContain('${{ secrets.NEWSPAPER_GMAIL_ADDRESS }}');
     expect(content).toContain('${{ secrets.NEWSPAPER_GMAIL_APP_PASSWORD }}');
-    expect(content).toContain('${{ secrets.NEWSPAPER_RECIPIENT_EMAIL }}');
 
     // Invariant: Never echo secrets
     expect(content).not.toContain('echo $GENERATE_SECRET');
@@ -55,8 +54,10 @@ describe('GitHub Actions Workflow: Daily Newspaper & Gmail Delivery Spec', () =>
     expect(content).toContain('Generation response must include a valid HTTPS editionUrl');
   });
 
-  it('7. Recipient Fallback: defaults recipient to sender Gmail address when NEWSPAPER_RECIPIENT_EMAIL is omitted', () => {
-    expect(content).toContain('recipient = os.environ.get("RECIPIENT_EMAIL", "").strip() or gmail');
+  it('7. Dynamic Recipient Retrieval & Privacy: queries /api/subscribers/recipients, uses Bcc, and exits 0 on empty list', () => {
+    expect(content).toContain('/api/subscribers/recipients');
+    expect(content).toContain('msg["Bcc"] = ", ".join(recipients)');
+    expect(content).toContain('sys.exit(0)');
   });
 
   it('8. Failure Isolation: generation runs in separate step from email delivery so mail failure preserves saved edition', () => {

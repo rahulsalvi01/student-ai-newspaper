@@ -567,7 +567,7 @@ export const subscribersRepo = {
     if (client) {
       const { data, error } = await client
         .from('subscribers')
-        .select('email')
+        .select('normalized_email, email')
         .eq('status', 'active')
         .order('created_at', { ascending: true });
 
@@ -575,13 +575,51 @@ export const subscribersRepo = {
         throw new Error(`Failed to retrieve subscribers: ${error.message}`);
       }
 
-      return (data || []).map((row) => row.email);
+      return (data || []).map((row) => row.normalized_email || row.email.toLowerCase().trim());
     }
 
     // In-memory fallback
     return Array.from(inMemorySubscribers.values())
       .filter((s) => s.status === 'active')
-      .map((s) => s.email);
+      .map((s) => s.normalized_email || s.email.toLowerCase().trim());
+  },
+
+  /**
+   * Unsubscribes an email address by updating status to 'unsubscribed'.
+   * Returns true if found and updated, false otherwise.
+   */
+  async unsubscribe(
+    rawEmail: string,
+    client: SupabaseClient<Database> | null = getSupabaseAdminClient()
+  ): Promise<boolean> {
+    const trimmed = rawEmail.trim();
+    const normalized = trimmed.toLowerCase();
+    const now = new Date().toISOString();
+
+    if (client) {
+      const { data, error } = await client
+        .from('subscribers')
+        .update({ status: 'unsubscribed', updated_at: now })
+        .eq('normalized_email', normalized)
+        .select();
+
+      if (error) {
+        throw new Error(`Failed to unsubscribe: ${error.message}`);
+      }
+
+      return Boolean(data && data.length > 0);
+    }
+
+    // In-memory fallback
+    const existing = inMemorySubscribers.get(normalized);
+    if (existing) {
+      existing.status = 'unsubscribed';
+      existing.updated_at = now;
+      inMemorySubscribers.set(normalized, existing);
+      return true;
+    }
+
+    return false;
   },
 
   /**

@@ -54,7 +54,7 @@ export function SubscribeSection() {
     <section
       id="subscribe"
       aria-label="Newspaper Subscription Section"
-      className="my-12 p-6 sm:p-8 bg-surface border-2 border-border-strong text-text-primary"
+      className="my-8 sm:my-12 p-4 sm:p-8 bg-surface border sm:border-2 border-border-strong text-text-primary"
     >
       <div className="max-w-2xl mx-auto text-center">
         {/* Section Header */}

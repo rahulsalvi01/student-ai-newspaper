@@ -56,9 +56,10 @@
 |---|---|
 | `NEWSPAPER_GENERATE_URL` | Your production endpoint: `https://YOUR_APP.vercel.app/api/generate` |
 | `NEWSPAPER_GENERATE_SECRET` | A strong 32+ character random secret (matching server `GENERATION_SECRET`) |
-| `NEWSPAPER_GMAIL_ADDRESS` | Your full Gmail address (e.g. `you@gmail.com`) |
+| `NEWSPAPER_GMAIL_ADDRESS` | Your full Gmail address (sender and fallback recipient) |
 | `NEWSPAPER_GMAIL_APP_PASSWORD` | 16-character Google App Password (without spaces) |
-| `NEWSPAPER_RECIPIENT_EMAIL` | *(Optional)* Destination inbox; defaults to `NEWSPAPER_GMAIL_ADDRESS` |
+
+> **Dynamic Recipient Delivery:** No static recipient secret is needed. The automated dispatch job dynamically queries `/api/subscribers/recipients` at send time. Supabase (`subscribers` table) is the single source of truth. Users can subscribe via the website form, and you can add manual recipients anytime with `npm run add-recipient <email>`. If the database has no subscribers, the workflow exits cleanly without sending. Unsubscribing immediately stops delivery.
 
 ---
 

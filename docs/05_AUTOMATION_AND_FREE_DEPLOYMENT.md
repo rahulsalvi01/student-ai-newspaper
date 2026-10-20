@@ -11,7 +11,7 @@ A GitHub Actions schedule can be configured as `30 2 * * *`. GitHub's scheduled 
 3. The server verifies the generation secret.
 4. The generation job fetches configured RSS/Atom feeds, normalises and deduplicates stories, ranks them and stores the edition.
 5. The generation endpoint returns only after the edition is saved and includes `editionUrl`, `issueDate`, and `articleCount` in its JSON response.
-6. GitHub Actions sends the HTTPS edition link to the configured Gmail address using Gmail SMTP and a Google App Password. By default, the same Gmail account is both sender and recipient; `NEWSPAPER_RECIPIENT_EMAIL` can optionally override the recipient.
+6. GitHub Actions dynamically fetches active recipients from the protected `/api/subscribers/recipients` endpoint (using `NEWSPAPER_GENERATE_SECRET`), with fallback to `NEWSPAPER_GMAIL_ADDRESS` if the list is empty. It then sends the HTTPS edition link using Gmail SMTP and a Google App Password.
 7. The workflow records status and exits non-zero if generation or email delivery fails. The saved in-app edition remains available even if email fails.
 8. Monitor failures through workflow history and application run logs.
 
@@ -34,7 +34,8 @@ Create secrets in GitHub repository Settings → Secrets and variables → Actio
 - `NEWSPAPER_GENERATE_SECRET`: same secret configured server-side as `GENERATION_SECRET`.
 - `NEWSPAPER_GMAIL_ADDRESS`: the Gmail account that sends the notification (typically your own Gmail).
 - `NEWSPAPER_GMAIL_APP_PASSWORD`: Google App Password for that Gmail account; never use your normal Google account password. App Passwords generally require 2-Step Verification and may be unavailable for some managed/security configurations.
-- `NEWSPAPER_RECIPIENT_EMAIL` (optional): destination address. If omitted, the message goes to `NEWSPAPER_GMAIL_ADDRESS`.
+
+> **Recipient Management:** Individual recipient emails are **not** stored in GitHub Secrets. Supabase is the single source of truth. The workflow queries `/api/subscribers/recipients` at dispatch time. Add recipients either via the website Subscribe form or by running `npm run add-recipient <email>`.
 
 Never put any secret directly into workflow YAML. Restrict repository access. Rotate the secret if exposed. Use separate development and production secrets.
 
@@ -51,7 +52,7 @@ Never put any secret directly into workflow YAML. Restrict repository access. Ro
 ## 6. Gmail delivery of the ready edition
 The scheduled workflow is configured to email the edition link after generation completes successfully. To activate it:
 1. In your Google Account, enable 2-Step Verification if eligible, then create an App Password for this project. Never use your normal Google password. Google may restrict App Passwords for managed accounts or accounts with certain security settings.
-2. In the GitHub repository, open Settings → Secrets and variables → Actions and add `NEWSPAPER_GMAIL_ADDRESS`, `NEWSPAPER_GMAIL_APP_PASSWORD`, and optionally `NEWSPAPER_RECIPIENT_EMAIL`. The address secret is the sender; if no recipient secret is set, the same address receives the email.
+2. In the GitHub repository, open Settings → Secrets and variables → Actions and add `NEWSPAPER_GMAIL_ADDRESS` and `NEWSPAPER_GMAIL_APP_PASSWORD`. Recipients are dynamically fetched from Supabase via `/api/subscribers/recipients` at send time; if no subscribers exist, the email is delivered to `NEWSPAPER_GMAIL_ADDRESS`.
 3. Make the protected generation endpoint return JSON containing `editionUrl` (an absolute HTTPS URL), `issueDate`, and `articleCount` only after the edition has been saved. The workflow validates `editionUrl` before sending.
 4. Run the workflow manually and confirm the email arrives, the link opens the deployed edition, and no credentials appear in logs.
 5. If generation succeeds but email fails, the newspaper remains available on the website; inspect Actions logs and retry after fixing Gmail settings.

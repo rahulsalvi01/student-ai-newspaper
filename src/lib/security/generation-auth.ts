@@ -74,7 +74,7 @@ export function getConfiguredGenerationSecret(): string | null {
   if (testSecretOverride !== null) {
     return testSecretOverride;
   }
-  const secret = process.env.GENERATION_SECRET;
+  const secret = process.env.GENERATION_SECRET || process.env.NEWSPAPER_GENERATE_SECRET;
   if (!secret || secret === 'REPLACE_WITH_LONG_RANDOM_SECRET') {
     return null;
   }

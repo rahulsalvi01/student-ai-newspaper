@@ -56,3 +56,44 @@ body {
 .rule-double {
   border-top: 3px double var(--border-strong);
 }
+
+/* Mobile-Friendly Scroll & Mask Utilities */
+.scrollbar-none {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* Touch-optimized smooth scrolling */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Horizontal scroll gradient fade mask to cleanly hint scrollable content */
+.mask-fade-x {
+  mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+}
+
+/* Safe area padding for modern mobile screens */
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Mobile Touch Tap Targets & Feedback */
+.tap-highlight-none {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 640px) {
+  /* Fluid headline scaling */
+  .fluid-title {
+    font-size: clamp(1.75rem, 8vw, 2.75rem);
+    line-height: 1.08;
+  }
+}
+

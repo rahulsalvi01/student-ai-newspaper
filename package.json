@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify-feeds": "tsx scripts/verify-feeds.ts",
-    "generate": "tsx scripts/trigger-generate.ts"
+    "generate": "tsx scripts/trigger-generate.ts",
+    "add-recipient": "tsx scripts/add-recipient.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

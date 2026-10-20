@@ -99,9 +99,9 @@ jobs:
         if: github.event.schedule == '30 2 * * *' || github.event_name == 'workflow_dispatch'
         env:
           GENERATE_URL: ${{ secrets.NEWSPAPER_GENERATE_URL }}
+          GENERATE_SECRET: ${{ secrets.NEWSPAPER_GENERATE_SECRET }}
           GMAIL_ADDRESS: ${{ secrets.NEWSPAPER_GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.NEWSPAPER_GMAIL_APP_PASSWORD }}
-          RECIPIENT_EMAIL: ${{ secrets.NEWSPAPER_RECIPIENT_EMAIL }}
         run: |
           set -euo pipefail
           python3 - <<'PYCODE'
@@ -110,24 +110,70 @@ jobs:
           import smtplib
           import ssl
           import sys
+          import urllib.error
           import urllib.request
           from email.message import EmailMessage
           from urllib.parse import urlparse
 
           gmail = os.environ.get("GMAIL_ADDRESS", "").strip().strip('"').strip("'")
           app_password = os.environ.get("GMAIL_APP_PASSWORD", "").replace(" ", "").strip().strip('"').strip("'")
-          recipient = os.environ.get("RECIPIENT_EMAIL", "").strip() or gmail
-          recipient = recipient.strip('"').strip("'")
-          recipients = [r.strip().strip('"').strip("'") for r in recipient.split(",") if r.strip()]
+          gen_secret = os.environ.get("GENERATE_SECRET", "").strip().strip('"').strip("'")
+          gen_url = os.environ.get("GENERATE_URL", "").strip().strip('"').strip("'")
 
           if not gmail or not app_password:
-              sys.exit("::error::Missing Gmail Actions secrets. Configure NEWSPAPER_GMAIL_ADDRESS and NEWSPAPER_GMAIL_APP_PASSWORD; NEWSPAPER_RECIPIENT_EMAIL is optional.")
+              sys.exit("::error::Missing Gmail Actions secrets. Configure NEWSPAPER_GMAIL_ADDRESS and NEWSPAPER_GMAIL_APP_PASSWORD.")
+
+          if not gen_url or not gen_secret:
+              sys.exit("::error::Missing generation secrets. Configure NEWSPAPER_GENERATE_URL and NEWSPAPER_GENERATE_SECRET.")
+
+          base_url = gen_url.replace("/api/generate", "").rstrip("/")
+          if not base_url:
+              sys.exit("::error::Invalid GENERATE_URL secret to determine website base URL.")
+
+          # 1. Fetch active recipient list dynamically from protected endpoint
+          recipients_url = f"{base_url}/api/subscribers/recipients"
+          try:
+              req = urllib.request.Request(
+                  recipients_url,
+                  headers={
+                      "Authorization": f"Bearer {gen_secret}",
+                      "User-Agent": "GitHub-Actions-Email-Step",
+                  },
+              )
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  if resp.status < 200 or resp.status >= 300:
+                      sys.exit(f"::error::Endpoint /api/subscribers/recipients failed with HTTP {resp.status}.")
+                  raw_body = resp.read().decode("utf-8")
+                  data = json.loads(raw_body)
+          except urllib.error.HTTPError as exc:
+              sys.exit(f"::error::Endpoint /api/subscribers/recipients failed with HTTP {exc.code}.")
+          except Exception as exc:
+              sys.exit(f"::error::Endpoint /api/subscribers/recipients request failed: {exc}.")
+
+          if not isinstance(data, dict) or "recipients" not in data or not isinstance(data["recipients"], list):
+              sys.exit("::error::Endpoint /api/subscribers/recipients returned an invalid payload (expected JSON object with 'recipients' list).")
+
+          raw_list = data["recipients"]
+          recipients = []
+          for r in raw_list:
+              if isinstance(r, str) and r.strip():
+                  cleaned = r.strip().lower()
+                  if cleaned not in recipients:
+                      recipients.append(cleaned)
+
+          # Log only the count to protect subscriber privacy (never print addresses)
+          print(f"Retrieved {len(recipients)} active subscriber(s) from /api/subscribers/recipients.")
+
+          # If no active subscribers exist, exit cleanly without sending so cron does not fail
+          if not recipients:
+              print("Notice: No active subscribers found in database. Exiting cleanly without sending email.")
+              sys.exit(0)
 
           edition_url = None
           issue_date = "Today's edition"
           article_count = None
 
-          # 1. If /tmp/generate-response.json exists (e.g. from manual run or step 1), use it
+          # 2. If /tmp/generate-response.json exists (e.g. from manual run or step 1), use it
           if os.path.exists("/tmp/generate-response.json"):
               try:
                   with open("/tmp/generate-response.json", "r", encoding="utf-8") as f:
@@ -138,16 +184,11 @@ jobs:
               except Exception:
                   pass
 
-          # 2. If running standalone at 08:00 AM, fetch latest ready edition from server
+          # 3. If running standalone at 08:00 AM, fetch latest ready edition from server
           if not edition_url:
-              gen_url = os.environ.get("GENERATE_URL", "").strip().strip('"').strip("'")
-              base_url = gen_url.replace("/api/generate", "").rstrip("/")
-              if not base_url:
-                  sys.exit("::error::Missing GENERATE_URL secret to determine website URL.")
-
               try:
-                  req = urllib.request.Request(f"{base_url}/api/editions", headers={"User-Agent": "GitHub-Actions-Email-Step"})
-                  with urllib.request.urlopen(req, timeout=30) as resp:
+                  ed_req = urllib.request.Request(f"{base_url}/api/editions", headers={"User-Agent": "GitHub-Actions-Email-Step"})
+                  with urllib.request.urlopen(ed_req, timeout=30) as resp:
                       ed_data = json.loads(resp.read().decode("utf-8"))
                   editions = ed_data.get("editions", [])
                   if editions:
@@ -164,10 +205,12 @@ jobs:
           if not parsed_url or parsed_url.scheme != "https" or not parsed_url.netloc:
               sys.exit("::error::Generation response must include a valid HTTPS editionUrl. No email sent.")
 
+          # 4. Address privacy: To is sender Gmail; Bcc contains all active subscribers
           msg = EmailMessage()
           msg["Subject"] = f"Your AI & Tech Newspaper is ready — {issue_date}"
           msg["From"] = gmail
-          msg["To"] = ", ".join(recipients)
+          msg["To"] = gmail
+          msg["Bcc"] = ", ".join(recipients)
 
           count_line = f"Stories in this edition: {article_count}\n\n" if isinstance(article_count, int) else ""
           msg.set_content(
@@ -184,7 +227,7 @@ jobs:
                   server.login(gmail, app_password)
                   server.send_message(msg, from_addr=gmail, to_addrs=recipients)
               
-              print(f"Edition link emailed successfully to {len(recipients)} recipient(s): {', '.join(recipients)}.")
+              print(f"Edition link emailed successfully via Bcc to {len(recipients)} recipient(s).")
           except Exception as exc:
               # Explicit failure reporting without printing passwords
               sys.exit(f"::error::Failed to send email via Gmail SMTP: {type(exc).__name__}: {exc}")

@@ -18,7 +18,7 @@ export function CornerSubscribeButton({ className }: CornerSubscribeButtonProps)
         aria-label="Daily Newsletter Subscription"
         className={
           className ||
-          'fixed bottom-6 right-6 z-40 flex flex-col items-end group'
+          'fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end group safe-bottom'
         }
       >
         {/* Subtle tooltip on hover */}
@@ -29,16 +29,18 @@ export function CornerSubscribeButton({ className }: CornerSubscribeButtonProps)
         <button
           onClick={() => setModalOpen(true)}
           aria-label="Subscribe to Daily Newspaper"
-          className="relative inline-flex items-center space-x-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-serif font-bold text-xs uppercase tracking-wider shadow-2xl shadow-red-600/50 rounded-full border border-red-400 ring-4 ring-red-500/30 hover:ring-red-500/60 transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-red-400"
+          className="relative inline-flex items-center space-x-1.5 sm:space-x-2 px-3.5 py-2 sm:px-4 sm:py-2.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-serif font-bold text-xs uppercase tracking-wider shadow-xl shadow-red-600/40 rounded-full border border-red-400 ring-2 sm:ring-4 ring-red-500/30 hover:ring-red-500/60 transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-red-400 touch-target"
         >
           {/* Pulsing indicator badge to highlight the button */}
-          <span className="relative flex h-2.5 w-2.5">
+          <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-200 opacity-80" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white" />
+            <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-white" />
           </span>
 
           <span className="text-sm">✉</span>
-          <span className="font-sans font-extrabold tracking-wide">SUBSCRIBE</span>
+          <span className="font-sans font-extrabold tracking-wide text-[11px] sm:text-xs">
+            SUBSCRIBE
+          </span>
         </button>
       </aside>
 
