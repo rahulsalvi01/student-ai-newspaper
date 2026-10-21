@@ -64,7 +64,7 @@ Qualified articles are categorized into their respective editorial sections. For
 Completed daily editions are archived with permanent records of article counts, source statistics, and issue metadata. Editions are rendered as fast, responsive server-side pages, ready for readers at their morning briefing hour.
 
 ### 5. Automated Scheduling & Morning Dispatch
-A scheduled automation workflow triggers the entire compilation process each morning at 08:00 Asia/Kolkata (02:30 UTC). Upon successful publication, a notification containing the direct link to the newly minted edition is automatically dispatched to the reader's personal email via standard secure mail delivery, ready to be enjoyed with morning coffee.
+Each morning at 08:00 Asia/Kolkata, an external cron scheduler (cron-job.org) dispatches the GitHub Actions workflow via a `workflow_dispatch` event, triggering the full compilation and email delivery pipeline. GitHub's own built-in `schedule:` cron triggers are intentionally disabled — cron-job.org is the sole scheduler because it fires at the configured second with high precision, whereas GitHub's scheduler can drift significantly under queue load. Upon successful publication, a notification containing the direct link to the newly minted edition is automatically dispatched to the reader's personal email via standard secure mail delivery, ready to be enjoyed with morning coffee.
 
 ---
 

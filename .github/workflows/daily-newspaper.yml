@@ -1,11 +1,6 @@
 name: Daily newspaper generation
 
 on:
-  schedule:
-    # 1. Daily news creation at 07:00 AM Asia/Kolkata (01:30 UTC)
-    - cron: "30 1 * * *"
-    # 2. Daily email dispatch at 08:00 AM Asia/Kolkata (02:30 UTC)
-    - cron: "30 2 * * *"
   workflow_dispatch:
     inputs:
       action:
@@ -31,7 +26,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Trigger protected generation endpoint
-        if: github.event.schedule == '30 1 * * *' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action != 'email_only'
         env:
           GENERATE_URL: ${{ secrets.NEWSPAPER_GENERATE_URL }}
           GENERATE_SECRET: ${{ secrets.NEWSPAPER_GENERATE_SECRET }}
@@ -96,7 +91,7 @@ jobs:
           "
 
       - name: Email the ready edition link to Gmail
-        if: github.event.schedule == '30 2 * * *' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action != 'generate_only'
         env:
           GENERATE_URL: ${{ secrets.NEWSPAPER_GENERATE_URL }}
           GENERATE_SECRET: ${{ secrets.NEWSPAPER_GENERATE_SECRET }}
